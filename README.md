@@ -1,1 +1,1 @@
-# emotet-url-extractor
+Extracts the hardcoded URLs from an emotet .doc
