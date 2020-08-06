@@ -43,8 +43,6 @@ if __name__ == "__main__":
         o = ""
         o = o.join(s)
 
-        print (o)
-
         if o[0:13].lower().startswith("powershell "):
             found=1
         else:
@@ -59,7 +57,7 @@ if __name__ == "__main__":
         script_bytes = base64.b64decode(s)
         script = script_bytes.decode('UTF-16LE')
 
-        print (script)
+
 
         s1 = script.find("http")
         s2 = s1+1
