@@ -9,7 +9,7 @@ def strings(filename, min=400):
             if c in string.printable:
                 result += c
                 continue
-            if len(result) >= min:
+            if len(result) >= min and result[0]=="p":
                 yield result
             result = ""
         if len(result) >= min:  
@@ -26,6 +26,7 @@ if __name__ == "__main__":
     input = ""
     input = input.join(strings(filename))
 
+
     start = 0
     end=0
     counter=0
@@ -36,12 +37,13 @@ if __name__ == "__main__":
             counter=counter+1
         
         end=end+counter
-        
 
 
         s = input.split(input[start+1:end])
         o = ""
         o = o.join(s)
+
+        print (o)
 
         if o[0:13].lower().startswith("powershell "):
             found=1
@@ -52,8 +54,12 @@ if __name__ == "__main__":
     if found==1:
         s=o[14:]
 
+        
+
         script_bytes = base64.b64decode(s)
         script = script_bytes.decode('UTF-16LE')
+
+        print (script)
 
         s1 = script.find("http")
         s2 = s1+1
