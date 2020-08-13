@@ -25,6 +25,7 @@ if __name__ == "__main__":
     filename = str(sys.argv[1])
     input = ""
     input = input.join(strings(filename))
+    input = input.strip()
 
 
     start = 0
@@ -52,21 +53,33 @@ if __name__ == "__main__":
     if found==1:
         s=o[14:]
 
-        
 
+        #remove trailing chars at the end, so we get a base64 string
+        cut= len(s)%4
+        if cut!=0:
+            s=s[:-cut]            
+
+ 
         script_bytes = base64.b64decode(s)
         script = script_bytes.decode('UTF-16LE')
 
 
-
         s1 = script.find("http")
-        s2 = s1+1
+        s2 = script.find("http",s1+1)
+        sep = script[s2-1] #Separator for the split
 
         while s2 != -1:        
-            s2=script.find("http",s1+1)
+            s2=script.find(sep,s1+1)
             if s2 != -1:
-                print(script[s1:s2-1])
-                s1=s2
+                print(script[s1:s2])
+                s1=s2+1
+            else: #The last URL is not finished by the separator, so lets find the ' or "" at the end of the string
+                t1= script.find("'", s1)
+                t2= script.find("\"", s1)
+                if t1 < t2:
+                    print (script[s1:t1])
+                else:
+                    print(script[s1:t2])
 
   
 
