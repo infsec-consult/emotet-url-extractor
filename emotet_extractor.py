@@ -156,8 +156,6 @@ if __name__ == "__main__":
     if len(urls) > 0:
         for i in urls:
             print(i)            
-        if len(urls) <5:
-                print ("\nOnly " +str(len(urls))+"/5 found")
     else:
         print ("No URLs found")
             
