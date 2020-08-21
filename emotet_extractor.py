@@ -134,28 +134,29 @@ if __name__ == "__main__":
                     else: #The last URL is not finished by the separator, so print the rest
                        urls.append(i[s1:]) 
 
-    if len(urls) == 0:
-        
-        s1 = script.find("http")
-        s2 = script.find("http",s1+1)
-        sep = script[s2-1] #Separator for the split
-
-        while s2 != -1:        
-            s2=script.find(sep,s1+1)
-            if s2 != -1:
-                urls.append(script[s1:s2])
-                s1=s2+1
-            else: #The last URL is not finished by the separator, so lets find the ' or "" at the end of the string
-                t1= script.find("'", s1)
-                t2= script.find("\"", s1)
-                if t1 < t2:
-                    urls.append(script[s1:t1])
-                else:
-                    urls.append(script[s1:t2])                    
-  
-    if len(urls) > 0:
-        for i in urls:
-            print(i)            
-    else:
-        print ("No URLs found")
+        if len(urls) == 0:
             
+            s1 = script.find("http")
+            s2 = script.find("http",s1+1)
+            sep = script[s2-1] #Separator for the split
+
+            while s2 != -1:        
+                s2=script.find(sep,s1+1)
+                if s2 != -1:
+                    urls.append(script[s1:s2])
+                    s1=s2+1
+                else: #The last URL is not finished by the separator, so lets find the ' or "" at the end of the string
+                    t1= script.find("'", s1)
+                    t2= script.find("\"", s1)
+                    if t1 < t2:
+                        urls.append(script[s1:t1])
+                    else:
+                        urls.append(script[s1:t2])                    
+    
+        if len(urls) > 0:
+            for i in urls:
+                print(i)            
+        else:
+            print ("No URLs found")
+    else:
+        print("No VBA-script found")            
