@@ -8,7 +8,7 @@ import oledump
 
 
 
-def strings(string_a, min=400):
+def get_printable_strings(string_a, min=400):
     all_strings = []
     for i in string_a:
         result = ""
@@ -79,51 +79,47 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     filename = args.file
-    input_a = []
-    input = ""
+    input_strings = []
+    printable_strings = ""
     ole = olefile.OleFileIO(open(filename, 'rb').read())
-    DecompressFunction = lambda x:x
-    DumpFunction = lambda x:x
     decoders=""
 
 
    
     for _, _, _, _, stream in oledump.OLEGetStreams(ole,False):
-        try:            
-            stri = C2SIP3(DumpFunction(DecompressFunction(stream)))
-            input_a.append(stri)
+        try:       
+            input_strings.append(C2SIP3(stream))
         except:
             next
  
 
-    input = input.join(strings(input_a))
-    input = input.strip()
+    printable_strings = printable_strings.join(get_printable_strings(input_strings))
+    printable_strings = printable_strings.strip()
 
 
     if args.print_input:
-        print(input)
+        print(printable_strings)
         print ("--------------")
 
     start=0
     end=0
-    
-    found=0
+    found=False 
 
-    while (found==0 and start != -1):
+    while (not found and start != -1):
         if args.delimiter:
-            s=input.split(args.delimiter)            
+            s=printable_strings.split(args.delimiter)            
         else:
-            start = input.find("p",start)
-            end = input.find("o",start+end)
+            start = printable_strings.find("p",start)
+            end = printable_strings.find("o",start+end)
 
             
-            s = input.split(input[start+1:end])
+            s = printable_strings.split(printable_strings[start+1:end])
 
         o = ""
         o = o.join(s)
 
         if o[0:13].lower().startswith("powershell "):
-            found=1
+            found=True
         elif end != -1:
             end = end +1
 
@@ -132,7 +128,7 @@ if __name__ == "__main__":
             end=0
             
 
-    if found==1:
+    if found:
         s=o[14:]
 
 
