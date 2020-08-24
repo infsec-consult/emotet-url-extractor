@@ -2,20 +2,28 @@ import base64
 import string
 import sys
 import argparse
+import olefile
+import oledump
 
-def strings(filename, min=400):
-    with open(filename, errors="ignore") as f:  
+
+
+
+def strings(string_a, min=400):
+    all_strings = []
+    for i in string_a:
         result = ""
-        for c in f.read():
+        for c in i:
             if c in string.printable:
                 result += c
                 continue
-            if len(result) >= min and result[0]=="p":
-                yield result
-            result = ""
-        if len(result) >= min:  
-            yield result
+            
+            if len(result) >= min:
+                all_strings.append(result)
+   
+            result=""
+    return all_strings
 
+        
 
 def clean_up(script_in):
     script_out = []
@@ -45,7 +53,18 @@ def grab_para(script_in):
          
     return parameter
 
-            
+
+def C2SIP3(string):
+    if sys.version_info[0] > 2:
+        if type(string) == bytes:
+            return ''.join([chr(x) for x in string])
+        else:
+            return string
+    else:
+        return string
+
+
+          
 
 
 if __name__ == "__main__":
@@ -59,33 +78,45 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
-
-
-
-
     filename = args.file
+    input_a = []
     input = ""
-    input = input.join(strings(filename))
+    ole = olefile.OleFileIO(open(filename, 'rb').read())
+    DecompressFunction = lambda x:x
+    DumpFunction = lambda x:x
+    decoders=""
+
+
+   
+    for _, _, _, _, stream in oledump.OLEGetStreams(ole,False):
+        try:            
+            stri = C2SIP3(DumpFunction(DecompressFunction(stream)))
+            input_a.append(stri)
+        except:
+            next
+ 
+
+    input = input.join(strings(input_a))
     input = input.strip()
+
 
     if args.print_input:
         print(input)
         print ("--------------")
 
-    start = 0
+    start=0
     end=0
-    counter=0
+    
     found=0
 
-    while (found==0 and end+counter<len(input)):
+    while (found==0 and start != -1):
         if args.delimiter:
             s=input.split(args.delimiter)            
         else:
-            while (end+counter<len(input) and input[end+counter]!="o"):
-                counter=counter+1
-        
-            end=end+counter
+            start = input.find("p",start)
+            end = input.find("o",start+end)
+
+            
             s = input.split(input[start+1:end])
 
         o = ""
@@ -93,9 +124,13 @@ if __name__ == "__main__":
 
         if o[0:13].lower().startswith("powershell "):
             found=1
+        elif end != -1:
+            end = end +1
+
         else:
+            start=start+1
             end=0
-            counter=counter+1
+            
 
     if found==1:
         s=o[14:]
