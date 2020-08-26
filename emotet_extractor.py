@@ -59,8 +59,6 @@ def grab_para(script_in):
                     counter=counter-1
                 position = position+1
             
-            #position = script_in.find(")",start)
-
             if position > -1:
                 parameter.append(script_in[start+1:position])
                 start = counter+1
