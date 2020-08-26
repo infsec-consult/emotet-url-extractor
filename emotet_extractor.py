@@ -32,25 +32,40 @@ def clean_up(script_in):
         i=i.replace("'","")
         i=i.replace("+","")
         i=i.replace('"',"")
+        i=i.replace("(","")
+        i=i.replace(')',"")
         script_out.append(i)
 
     return script_out
 
+
+#TODO: Different delimiters for parameters
 def grab_para(script_in):
     start = 0
     counter=0
+    position = 0
     parameter = []
     
-    while start < len(script_in) and counter > -1:
-        counter=script_in.find ("(",start)
-        if counter > -1:
-            start=counter
-            counter = script_in.find(")",start)
-            if counter > -1:
-                parameter.append(script_in[start+1:counter])
-                start = counter+1
+    while start < len(script_in) and position > -1:
+        position=script_in.find ("(",position)
+        counter = 0
+        if position > -1:
+            start=position
+            
+            while (script_in[position] != ")" or counter != 1) and position<len(script_in):
+                if script_in[position] == "(":
+                    counter=counter+1
+                if script_in[position] == ")":
+                    counter=counter-1
+                position = position+1
+            
+            #position = script_in.find(")",start)
 
-         
+            if position > -1:
+                parameter.append(script_in[start+1:position])
+                start = counter+1
+        
+  
     return parameter
 
 
