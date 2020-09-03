@@ -8,19 +8,15 @@ import oledump
 
 
 
-def get_printable_strings(string_a, min=400):
+def get_printable_strings(string_a, min=0):
     all_strings = []
     for i in string_a:
-        result = ""
+        #result = ""
         for c in i:
             if c in string.printable:
-                result += c
-                continue
-            
-            if len(result) >= min:
-                all_strings.append(result)
-   
-            result=""
+                all_strings.append(c)
+
+
     return all_strings
 
         
@@ -70,7 +66,9 @@ def grab_para(script_in):
 def C2SIP3(string):
     if sys.version_info[0] > 2:
         if type(string) == bytes:
-            return ''.join([chr(x) for x in string])
+            a= ''.join([chr(x) for x in string])
+
+            return a
         else:
             return string
     else:
@@ -106,6 +104,8 @@ if __name__ == "__main__":
             next
  
 
+
+
     printable_strings = printable_strings.join(get_printable_strings(input_strings))
     printable_strings = printable_strings.strip()
 
@@ -114,93 +114,156 @@ if __name__ == "__main__":
         print(printable_strings)
         print ("--------------")
 
+
     start=0
     end=0
     found=False 
+    lookup="powershell"
+    l_counter=1
+    possible_script = []
 
-    while (not found and start != -1):
-        if args.delimiter:
-            s=printable_strings.split(args.delimiter)            
-        else:
-            start = printable_strings.find("p",start)
-            end = printable_strings.find("o",start+end)
 
-            
-            s = printable_strings.split(printable_strings[start+1:end])
+    
 
-        o = ""
-        o = o.join(s)
+    while (l_counter < 10):
+        while (start != -1):
+            if args.delimiter:
+                s=printable_strings.split(args.delimiter)            
+            else:
+                print("Von "+lookup[0:l_counter])
+                print("Bis "+lookup[l_counter:2*l_counter])
+                start = printable_strings.find(lookup[0:l_counter],start)
+                end = printable_strings.find(lookup[l_counter:2*l_counter],start+end)
+                print(l_counter)
+                print("Start: "+str(start))
+                print("End: "  +str(end))
+                
+                #if start==36363:
+                #    print (printable_strings[start+l_counter:end])
 
-        if o[0:13].lower().startswith("powershell "):
-            found=True
-        elif end != -1:
-            end = end +1
+                if ( start+l_counter<end):
+                    #print("T= "+printable_strings[start+l_counter:end])
+                    s = printable_strings.split(printable_strings[start+l_counter:end])
+                    
+                else:
+                    s= []
+                    
 
-        else:
-            start=start+1
-            end=0
-            
+
+            o = ""
+            o = o.join(s)
+
+            start2=o.lower().find("powershell")
+            o=o[start2:]
+
+
+
+            if o[0:13].lower().startswith("powershell "):
+                found=True
+                               
+                possible_script.append(o)
+                print("Script added")
+
+            if end != -1:
+                print("end+1")
+                end = end +1
+
+            elif start != -1:
+                print("start+1")
+                start=start+1
+                end=0
+
+            print(start)
+            print(end)
+
+        l_counter = l_counter+1  
+        start=0
+        end=0
+
+    print(len(possible_script))
+
+
+
 
     if found:
-        s=o[14:]
+        for i in possible_script:
+            
+            end=i.find("=",start)
+            end2 = i.find(",",start)
+            print ("End"+str(end))
+            print (end2)
+            if end2 < end:
+                end=end2
+            else:
+                end=end+1
 
+            print(end)
+            s=i[14:end]
+            print(s)
 
-        #remove trailing chars at the end, so we get a base64 string
-        cut= len(s)%4
-        if cut!=0:
-            s=s[:-cut]            
+            #remove trailing chars at the end, so we get a base64 string
+            cut= len(s)%4
+            print(cut)
+            if cut==3:
+                s+="="            
 
- 
-        script_bytes = base64.b64decode(s)
-        script = script_bytes.decode('UTF-16LE')
+    
+            try:
+                script_bytes = base64.b64decode(s)
+                script = script_bytes.decode('UTF-16LE')
+                print(script)
+            except:
+                print("Decode error")
+                continue
 
-        if args.print_script:
-            print(script)
-            print ("--------------")
+            if args.print_script:
+                print(script)
+                print ("--------------")
 
+            
 
-        urls=[]
-        
-        arg=clean_up(grab_para(script))
-         
-        for i in arg:
-            i.lower()
-            if i.find("http") > -1:
-                s1 = i.find("http")
-                s2 = i.find("http",s1+1)
-                sep = i[s2-1] #Separator for the split
+            urls=[]
+            
+            arg=clean_up(grab_para(script))
+            
+            for i in arg:
+                i.lower()
+                if i.find("http") > -1:
+                    s1 = i.find("http")
+                    s2 = i.find("http",s1+1)
+                    sep = i[s2-1] #Separator for the split
+
+                    while s2 != -1:        
+                        s2=i.find(sep,s1+1)
+                        if s2 != -1:
+                            urls.append(i[s1:s2])
+                            s1=s2+1
+                        else: #The last URL is not finished by the separator, so print the rest
+                            urls.append(i[s1:]) 
+
+            if len(urls) == 0:
+                
+                s1 = script.find("http")
+                s2 = script.find("http",s1+1)
+                sep = script[s2-1] #Separator for the split
 
                 while s2 != -1:        
-                    s2=i.find(sep,s1+1)
+                    s2=script.find(sep,s1+1)
                     if s2 != -1:
-                        urls.append(i[s1:s2])
+                        urls.append(script[s1:s2])
                         s1=s2+1
-                    else: #The last URL is not finished by the separator, so print the rest
-                       urls.append(i[s1:]) 
-
-        if len(urls) == 0:
-            
-            s1 = script.find("http")
-            s2 = script.find("http",s1+1)
-            sep = script[s2-1] #Separator for the split
-
-            while s2 != -1:        
-                s2=script.find(sep,s1+1)
-                if s2 != -1:
-                    urls.append(script[s1:s2])
-                    s1=s2+1
-                else: #The last URL is not finished by the separator, so lets find the ' or "" at the end of the string
-                    t1= script.find("'", s1)
-                    t2= script.find("\"", s1)
-                    if t1 < t2:
-                        urls.append(script[s1:t1])
-                    else:
-                        urls.append(script[s1:t2])                    
-    
-        if len(urls) > 0:
-            for i in urls:
-                print(i)            
-        else:
-            print ("No URLs found")
+                    else: #The last URL is not finished by the separator, so lets find the ' or "" at the end of the string
+                        t1= script.find("'", s1)
+                        t2= script.find("\"", s1)
+                        if t1 < t2:
+                            urls.append(script[s1:t1])
+                        else:
+                            urls.append(script[s1:t2])                    
+        
+            if len(urls) > 0:
+                for i in urls:
+                    print(i)            
+            else:
+                print ("No URLs found")
     else:
         print("No VBA-script found")            
