@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('file', action="store", help='the emotet .doc-file')
     parser.add_argument('-s', action="store_true", default=False, dest='print_script', help='print the emotet vba-script after base64-decode')
     parser.add_argument('-d', action="store", dest="delimiter", help="manually set the split delimiter" )
-    parser.add_argument('-i', action="store_true", dest="print_input", help="print the obfuscatet script as axtrcted from the .doc")
+
 
     args = parser.parse_args()
 
@@ -110,9 +110,7 @@ if __name__ == "__main__":
     printable_strings = printable_strings.strip()
 
 
-    if args.print_input:
-        print(printable_strings)
-        print ("--------------")
+
 
 
     start=0
@@ -130,19 +128,11 @@ if __name__ == "__main__":
             if args.delimiter:
                 s=printable_strings.split(args.delimiter)            
             else:
-                print("Von "+lookup[0:l_counter])
-                print("Bis "+lookup[l_counter:2*l_counter])
                 start = printable_strings.find(lookup[0:l_counter],start)
                 end = printable_strings.find(lookup[l_counter:2*l_counter],start+end)
-                print(l_counter)
-                print("Start: "+str(start))
-                print("End: "  +str(end))
-                
-                #if start==36363:
-                #    print (printable_strings[start+l_counter:end])
 
                 if ( start+l_counter<end):
-                    #print("T= "+printable_strings[start+l_counter:end])
+
                     s = printable_strings.split(printable_strings[start+l_counter:end])
                     
                 else:
@@ -160,50 +150,45 @@ if __name__ == "__main__":
 
             if o[0:13].lower().startswith("powershell "):
                 found=True
-                               
                 possible_script.append(o)
-                print("Script added")
+
 
             if end != -1:
-                print("end+1")
                 end = end +1
 
             elif start != -1:
-                print("start+1")
                 start=start+1
                 end=0
 
-            print(start)
-            print(end)
 
         l_counter = l_counter+1  
         start=0
         end=0
 
-    print(len(possible_script))
+
 
 
 
 
     if found:
+        urls=[]
         for i in possible_script:
-            
-            end=i.find("=",start)
-            end2 = i.find(",",start)
-            print ("End"+str(end))
-            print (end2)
-            if end2 < end:
-                end=end2
-            else:
-                end=end+1
+            s_end = 14
+            c = i[s_end]
 
-            print(end)
+            while (c.isalnum() or c == "=") and s_end>-1:
+                s_end+=1
+                if s_end <len(i):
+                    c = i[s_end]
+                else:
+                    s_end = -1
+
+            end = s_end
             s=i[14:end]
-            print(s)
+
 
             #remove trailing chars at the end, so we get a base64 string
             cut= len(s)%4
-            print(cut)
             if cut==3:
                 s+="="            
 
@@ -211,9 +196,7 @@ if __name__ == "__main__":
             try:
                 script_bytes = base64.b64decode(s)
                 script = script_bytes.decode('UTF-16LE')
-                print(script)
             except:
-                print("Decode error")
                 continue
 
             if args.print_script:
@@ -222,7 +205,7 @@ if __name__ == "__main__":
 
             
 
-            urls=[]
+            
             
             arg=clean_up(grab_para(script))
             
@@ -260,10 +243,17 @@ if __name__ == "__main__":
                         else:
                             urls.append(script[s1:t2])                    
         
-            if len(urls) > 0:
-                for i in urls:
-                    print(i)            
-            else:
-                print ("No URLs found")
+        if len(urls) > 0:            
+            urls.sort()
+            output = []
+            for x in urls:
+                if x not in output:
+                    output.append(x)
+                
+            
+            for i in output:
+                print(i)            
+        else:
+            print ("No URLs found")
     else:
         print("No VBA-script found")            
