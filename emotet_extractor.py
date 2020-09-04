@@ -8,16 +8,15 @@ import oledump
 
 
 
-def get_printable_strings(string_a, min=0):
-    all_strings = []
-    for i in string_a:
-        #result = ""
+def get_printable_strings(string_input, min=0):
+    printable_strings = []
+    for i in string_input:        
         for c in i:
             if c in string.printable:
-                all_strings.append(c)
+                printable_strings.append(c)
 
 
-    return all_strings
+    return printable_strings
 
         
 
@@ -36,7 +35,7 @@ def clean_up(script_in):
 
 
 #TODO: Different delimiters for parameters
-def grab_para(script_in):
+def get_parameters(script_in):
     start = 0
     counter=0
     position = 0
@@ -63,14 +62,10 @@ def grab_para(script_in):
     return parameter
 
 
-def C2SIP3(string):
-    if sys.version_info[0] > 2:
-        if type(string) == bytes:
-            a= ''.join([chr(x) for x in string])
-
-            return a
-        else:
-            return string
+def b2s(string):
+    if type(string) == bytes:
+        a= ''.join([chr(x) for x in string])
+        return a
     else:
         return string
 
@@ -91,66 +86,79 @@ if __name__ == "__main__":
 
     filename = args.file
     input_strings = []
-    printable_strings = ""
+    printable_string = ""
     ole = olefile.OleFileIO(open(filename, 'rb').read())
     decoders=""
 
 
-   
+   #Grab the content of all streams
     for _, _, _, _, stream in oledump.OLEGetStreams(ole,False):
         try:       
-            input_strings.append(C2SIP3(stream))
+            input_strings.append(b2s(stream))
         except:
             next
  
-
-
-
-    printable_strings = printable_strings.join(get_printable_strings(input_strings))
-    printable_strings = printable_strings.strip()
-
+    #We are looking for scriptcode, so filter for printable strings
+    printable_string = printable_string.join(get_printable_strings(input_strings))
+    printable_string = printable_string.strip()
 
 
 
 
+
+    #Find any occurrence of "powershell" with any delimiter inside the word
+    #e.g. "p*o*w*e*r*s*h*e*l*l" or "po|we|rs|he|ll" or "powerE3$$d_shell"
+    #and split the rest of the string with the delimiter
+    
+    #possible start of the delimiter powershell in the string
     start=0
+    #possible end of the delimiter powershell in the string
     end=0
+
+    #found any script
     found=False 
+
     lookup="powershell"
-    l_counter=1
+
+    #Length of the substrings of "powershell" we are looking for 
+    #first we look for 1 character substrings "p" and "o"
+    #any characters between "p" and "o" are used as an delimiter to split the string. 
+    #If the join of the result starts with the word "powershell" we found the script. 
+    #If not continue with the next occurance of "p" and "o".
+    #If all "p" and "o" are checked move on to 2 characters "po" and "we" and 3 characters ...
+    lookup_length=1
     possible_script = []
 
-
-    
-
-    while (l_counter < 10):
+    while (lookup_length < 10):
         while (start != -1):
+            #Just for development: Submit a delimiter
             if args.delimiter:
-                s=printable_strings.split(args.delimiter)            
+                s=printable_string.split(args.delimiter)            
             else:
-                start = printable_strings.find(lookup[0:l_counter],start)
-                end = printable_strings.find(lookup[l_counter:2*l_counter],start+end)
+                start = printable_string.find(lookup[0:lookup_length],start)
+                end = printable_string.find(lookup[lookup_length:2*lookup_length],start+end)
 
-                if ( start+l_counter<end):
+                if ( start+lookup_length<end):
 
-                    s = printable_strings.split(printable_strings[start+l_counter:end])
+                    s = printable_string.split(printable_string[start+lookup_length:end])
                     
                 else:
                     s= []
                     
 
 
-            o = ""
-            o = o.join(s)
+            possible_powershell = ""
+            possible_powershell = possible_powershell.join(s)
 
-            start2=o.lower().find("powershell")
-            o=o[start2:]
+            #get the startposition of a possible powershell script and delete all previous characters
+            start2=possible_powershell.lower().find("powershell")
+            possible_powershell=possible_powershell[start2:]
 
 
-
-            if o[0:13].lower().startswith("powershell "):
+            
+            if possible_powershell[0:13].lower().startswith("powershell "):
                 found=True
-                possible_script.append(o)
+                possible_script.append(possible_powershell)
 
 
             if end != -1:
@@ -161,7 +169,7 @@ if __name__ == "__main__":
                 end=0
 
 
-        l_counter = l_counter+1  
+        lookup_length = lookup_length+1  
         start=0
         end=0
 
@@ -169,13 +177,17 @@ if __name__ == "__main__":
 
 
 
-
+    #If we found at least one possible script try to base64-decode and look for URLs
     if found:
         urls=[]
         for i in possible_script:
+            #the first 14 characters are "powershell -e ". next comes the base64 code
             s_end = 14
+            #first character of the base64 code
             c = i[s_end]
 
+            #the possible script starts after "powershell -e ". now lets find the end
+            #The end is the first non alphanumeric sign or an "="
             while (c.isalnum() or c == "=") and s_end>-1:
                 s_end+=1
                 if s_end <len(i):
@@ -184,15 +196,17 @@ if __name__ == "__main__":
                     s_end = -1
 
             end = s_end
+
+            #grab the base64-code
             s=i[14:end]
 
 
-            #remove trailing chars at the end, so we get a base64 string
+            #add "=" at the end, so we get a base64 string
             cut= len(s)%4
             if cut==3:
                 s+="="            
 
-    
+            #Hopefully we got are real base64-encoded script
             try:
                 script_bytes = base64.b64decode(s)
                 script = script_bytes.decode('UTF-16LE')
@@ -206,9 +220,10 @@ if __name__ == "__main__":
             
 
             
-            
-            arg=clean_up(grab_para(script))
-            
+            #URLs are inside the parameters, so we clean up the script by e.g. removeing ",+" 
+            #and grab any strings inside an pair of "(" and ")" as parameters
+            arg=clean_up(get_parameters(script))
+                        
             for i in arg:
                 i.lower()
                 if i.find("http") > -1:
@@ -221,9 +236,11 @@ if __name__ == "__main__":
                         if s2 != -1:
                             urls.append(i[s1:s2])
                             s1=s2+1
-                        else: #The last URL is not finished by the separator, so print the rest
+                        else: #The last URL is not finished by the separator, so print the rest of the parameter
                             urls.append(i[s1:]) 
 
+            #if we found no URL in the parameter, lets try something else
+            #simply look for any substrings starting with "http"
             if len(urls) == 0:
                 
                 s1 = script.find("http")
@@ -243,6 +260,7 @@ if __name__ == "__main__":
                         else:
                             urls.append(script[s1:t2])                    
         
+        #If we found at least one URL, sort and unique the list
         if len(urls) > 0:            
             urls.sort()
             output = []
@@ -254,6 +272,9 @@ if __name__ == "__main__":
             for i in output:
                 print(i)            
         else:
+            #Probably some new obfuscation in the script
             print ("No URLs found")
     else:
+        #Perhaps a new way to hide the script code
+        #send a link for the sample at @infsec_consult on twitter 
         print("No VBA-script found")            
