@@ -4,7 +4,7 @@ Usage:
 python3 ./emotet_extractor.py $file
 
 -h for help  
--s will dump the script after base64-decode
+-s will dump the script after base64-decode  
 -g If the normal search cant find a script, try -g. Warning, long runtime
 
 
