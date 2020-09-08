@@ -80,7 +80,7 @@ if __name__ == "__main__":
     parser.add_argument('file', action="store", help='the emotet .doc-file')
     parser.add_argument('-s', action="store_true", default=False, dest='print_script', help='print the emotet vba-script after base64-decode')
     parser.add_argument('-d', action="store", dest="delimiter", help="manually set the split delimiter" )
-
+    parser.add_argument('-g', action="store_true", default=False, dest="greedy", help="More detailed check but longer runtime" )
 
     args = parser.parse_args()
 
@@ -90,6 +90,8 @@ if __name__ == "__main__":
     ole = olefile.OleFileIO(open(filename, 'rb').read())
     decoders=""
 
+    if args.greedy:
+        print("Greedy search startet. This may take some time")
 
    #Grab the content of all streams
     for _, _, _, _, stream in oledump.OLEGetStreams(ole,False):
@@ -135,8 +137,13 @@ if __name__ == "__main__":
             if args.delimiter:
                 s=printable_string.split(args.delimiter)            
             else:
-                start = printable_string.find(lookup[0:lookup_length],start)
-                end = printable_string.find(lookup[lookup_length:2*lookup_length],start+end)
+                
+                if args.greedy:
+                    start = printable_string.find(lookup[0:lookup_length],start)
+                    end = printable_string.find(lookup[lookup_length:2*lookup_length],end)
+                else:
+                    start = printable_string.find(lookup[0:lookup_length],start)
+                    end = printable_string.find(lookup[lookup_length:2*lookup_length],start+end)
 
                 if ( start+lookup_length<end):
 
@@ -161,7 +168,7 @@ if __name__ == "__main__":
                 possible_script.append(possible_powershell)
 
 
-            if end != -1:
+            if end != -1 and args.greedy:
                 end = end +1
 
             elif start != -1:
@@ -209,7 +216,7 @@ if __name__ == "__main__":
             #Hopefully we got are real base64-encoded script
             try:
                 script_bytes = base64.b64decode(s)
-                script = script_bytes.decode('UTF-16LE')
+                script = script_bytes.decode('UTF-16LE',errors="ignore")
             except:
                 continue
 
@@ -277,4 +284,4 @@ if __name__ == "__main__":
     else:
         #Perhaps a new way to hide the script code
         #send a link for the sample at @infsec_consult on twitter 
-        print("No VBA-script found")            
+        print("No VBA-script found")        
