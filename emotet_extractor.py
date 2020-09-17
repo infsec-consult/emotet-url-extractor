@@ -12,6 +12,7 @@ def get_printable_strings(string_input, min=0):
     printable_strings = []
     for i in string_input:        
         for c in i:
+            #if c in string.digits or c in string.ascii_letters or c in string.punctuation:
             if c in string.printable:
                 printable_strings.append(c)
 
@@ -104,6 +105,7 @@ if __name__ == "__main__":
     printable_string = printable_string.join(get_printable_strings(input_strings))
     printable_string = printable_string.strip()
 
+    
 
 
 
@@ -157,12 +159,13 @@ if __name__ == "__main__":
             possible_powershell = ""
             possible_powershell = possible_powershell.join(s)
 
+
+
             #get the startposition of a possible powershell script and delete all previous characters
             start2=possible_powershell.lower().find("powershell")
             possible_powershell=possible_powershell[start2:]
 
-
-            
+           
             if possible_powershell[0:13].lower().startswith("powershell "):
                 found=True
                 possible_script.append(possible_powershell)
@@ -182,14 +185,12 @@ if __name__ == "__main__":
 
 
 
-
-
     #If we found at least one possible script try to base64-decode and look for URLs
     if found:
         urls=[]
         for i in possible_script:
-            #the first 14 characters are "powershell -e ". next comes the base64 code
-            s_end = 14
+            #the base64 code always starts with "jab"
+            s_end = i.lower().find("j")
             #first character of the base64 code
             c = i[s_end]
 
@@ -205,8 +206,8 @@ if __name__ == "__main__":
             end = s_end
 
             #grab the base64-code
-            s=i[14:end]
-
+            s=i[i.lower().find("j"):end]
+            
 
             #add "=" at the end, so we get a base64 string
             cut= len(s)%4
